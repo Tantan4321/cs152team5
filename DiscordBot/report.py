@@ -5,7 +5,12 @@ import re
 class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
-    MESSAGE_IDENTIFIED = auto()
+    AWAITING_ABUSE = auto()
+    IS_BULLYING = auto()
+    BTYPE_IDENTIFIED = auto()
+    VICTIM_SELF = auto()
+    AWAITING_BLOCK = auto()
+    BLOCK_RECIEVED = auto()
     REPORT_COMPLETE = auto()
 
 class Report:
@@ -17,6 +22,8 @@ class Report:
         self.state = State.REPORT_START
         self.client = client
         self.message = None
+        self.btype = None
+        self.bvictim = None
     
     async def handle_message(self, message):
         '''
@@ -54,14 +61,76 @@ class Report:
                 return ["It seems this message was deleted or never existed. Please try again or say `cancel` to cancel."]
 
             # Here we've found the message - it's up to you to decide what to do next!
-            self.state = State.MESSAGE_IDENTIFIED
+            self.state = State.AWAITING_ABUSE
+            # prompt user to select sub-category
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    "This is all I know how to do right now - it's up to you to build out the rest of my reporting flow!"]
+                    "Please classify this message by inputting its associated number: ", \
+                    "1. Offensive Content", \
+                    "2. Spam", \
+                    "3. Bullying", \
+                    "4. Immenent Danger"]
         
-        if self.state == State.MESSAGE_IDENTIFIED:
-            return ["<insert rest of reporting flow here>"]
+        if self.state == State.AWAITING_ABUSE:
+            if message.content == '3':
+                self.state = State.IS_BULLYING
+                return ["Please specify the type of bullying: ", \
+                "1. Threatening or Abusive Messages", \
+                "2. Doxxing or Exposing Private Information", \
+                "3. Sharing Nonconsentual Image(s)"]
+            else:
+                self.state = State.AWAITING_BLOCK
+                return ["Thank you for keeping our community safe!"]
+
+        if self.state == State.IS_BULLYING:
+            self.btype = int(message.content)
+            self.state = State.BTYPE_IDENTIFIED
+            return ["This content is bullying: ", \
+            "1. Me", \
+            "2. Someone I Know", \
+            "3. Other"]
+
+        if self.state == State.BTYPE_IDENTIFIED:
+            self.bvictim = int(message.content)
+            handle_bullying_report()
+            if message.content == '1':
+                self.state = State.VICTIM_SELF
+                return ["Your report is being reviewed," \
+                "Would you like to be redirected to a list of mental health resources? (Y/N)"]
+            else:
+                self.state = State.AWAITING_BLOCK
+                return ["Your report is being reviewed. Thank you for keeping your community safe!"]
+
+        if self.state == State.VICTIM_SELF:
+            self.state = State.AWAITING_BLOCK
+            if message.content == "Y":
+                return ["Mental health resources"]
+            else:
+                return ["Thank you for keeping your community safe!"]
+
+        if self.state == State.AWAITING_BLOCK:
+            self.state = State.BLOCK_RECIEVED
+            return ["Would your like to block this user?", \
+            "1. Yes, just this account", \
+            "2. Yes, and future accounts they create", \
+            "3. No"]
+
+        if self.state == State.BLOCK_RECIEVED:
+            self.state = State.REPORT_COMPLETE
+            if message.content == '1':
+                return ["This user has been blocked."]
+            elif message.content == '2':
+                return ["This user and the accounts they may create have been blocked."]
+            else:
+                return ["The user will not be blocked."]
+
+        if self.state == State.REPORT_COMPLETE:
+            return ["The report has been completed."]
 
         return []
+
+
+    def handle_bullying_report(self):
+        return 0
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
