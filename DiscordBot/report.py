@@ -3,15 +3,14 @@ import discord
 import re
 
 class State(Enum):
-    REPORT_START = auto()
-    AWAITING_MESSAGE = auto()
-    AWAITING_ABUSE = auto()
-    IS_BULLYING = auto()
-    BTYPE_IDENTIFIED = auto()
-    VICTIM_SELF = auto()
-    AWAITING_BLOCK = auto()
-    BLOCK_RECIEVED = auto()
-    REPORT_COMPLETE = auto()
+    REPORT_START = auto() # start: user sends report keyword, end: ask for link
+    AWAITING_MESSAGE = auto() # start: user sends link, end: ask for abuse type
+    AWAITING_ABUSE_TYPE = auto() # start: user sends abuse type, end: ask for type of bullying or thank/ask block
+    AWAITING_BULLYING_TYPE = auto() # start: user sends bullying type, end: ask for bullying victim
+    AWAITING_VICTIM = auto() # start: user sends victim, end: ask about resources or thank/ask block
+    AWAITING_RESOURCES = auto() # start: user sends resource preferences, end: send resources(?), thank/ask block
+    AWAITING_BLOCK_TYPE = auto() # start: user sends block preferences, end: block simulated
+    REPORT_COMPLETE = auto() # start: block simulated
 
 class Report:
     START_KEYWORD = "report"
@@ -22,8 +21,8 @@ class Report:
         self.state = State.REPORT_START
         self.client = client
         self.message = None
-        self.btype = None
-        self.bvictim = None
+        self.bullying_type = None # 1: threatening/abusive messages, 2: doxxing, 3: nonconsensual images
+        self.victim = None # 1: me, 2: someone I know, 3: other
     
     async def handle_message(self, message):
         '''
@@ -61,67 +60,75 @@ class Report:
                 return ["It seems this message was deleted or never existed. Please try again or say `cancel` to cancel."]
 
             # Here we've found the message - it's up to you to decide what to do next!
-            self.state = State.AWAITING_ABUSE
+            self.state = State.AWAITING_ABUSE_TYPE
             # prompt user to select sub-category
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    "Please classify this message by inputting its associated number: ", \
-                    "1. Offensive Content", \
+                    "Please enter the number associated with your reason for reporting this post: ", \
+                    "1. Bullying", \
                     "2. Spam", \
-                    "3. Bullying", \
+                    "3. Offensive Content", \
                     "4. Immenent Danger"]
         
-        if self.state == State.AWAITING_ABUSE:
-            if message.content == '3':
-                self.state = State.IS_BULLYING
+        if self.state == State.AWAITING_ABUSE_TYPE:
+            if message.content == '1':
+                self.state = State.AWAITING_BULLYING_TYPE
                 return ["Please specify the type of bullying: ", \
-                "1. Threatening or Abusive Messages", \
-                "2. Doxxing or Exposing Private Information", \
-                "3. Sharing Nonconsentual Image(s)"]
+                "1. Threatening/abusive message(s)", \
+                "2. Doxxing/exposing private information", \
+                "3. Sharing nonconsentual image(s)"]
             else:
-                self.state = State.AWAITING_BLOCK
-                return ["Thank you for keeping our community safe!"]
+                self.state = State.AWAITING_BLOCK_TYPE
+                return ["Thank you for keeping our community safe! Your report will be reviewed and appropriate action will be taken.", \
+                "Would you like to block this user to prevent seeing their content in the future?", \
+                "1. Yes, just this account", \
+                "2. Yes, this and any future accounts they create using the same email/phone number", \
+                "3. No, I wish to continue seeing this creator's content"]
 
-        if self.state == State.IS_BULLYING:
-            self.btype = int(message.content)
-            self.state = State.BTYPE_IDENTIFIED
+        if self.state == State.AWAITING_BULLYING_TYPE:
+            self.bullying_type = int(message.content)
+            self.state = State.AWAITING_VICTIM
             return ["This content is bullying: ", \
             "1. Me", \
             "2. Someone I Know", \
             "3. Other"]
 
-        if self.state == State.BTYPE_IDENTIFIED:
-            self.bvictim = int(message.content)
-            handle_bullying_report()
+        if self.state == State.AWAITING_VICTIM:
+            self.victim = int(message.content)
+            self.handle_bullying_report()
             if message.content == '1':
-                self.state = State.VICTIM_SELF
-                return ["Your report is being reviewed," \
-                "Would you like to be redirected to a list of mental health resources? (Y/N)"]
+                self.state = State.AWAITING_RESOURCES
+                return ["Would you like to be redirected to a list of mental health help resources? You are not alone. (Y/N)"]
             else:
-                self.state = State.AWAITING_BLOCK
-                return ["Your report is being reviewed. Thank you for keeping your community safe!"]
+                self.state = State.AWAITING_BLOCK_TYPE
+                return ["Thank you for keeping our community safe from bullying! Your report will be reviewed and appropriate action will be taken.", \
+                "Would you like to block this user to prevent seeing their content in the future?", \
+                "1. Yes, just this account", \
+                "2. Yes, this and any future accounts they create using the same email/phone number", \
+                "3. No, I wish to continue seeing this creator's content"]
 
-        if self.state == State.VICTIM_SELF:
-            self.state = State.AWAITING_BLOCK
+        if self.state == State.AWAITING_RESOURCES:
+            reply = []
+            self.state = State.AWAITING_BLOCK_TYPE
             if message.content == "Y":
-                return ["Mental health resources"]
-            else:
-                return ["Thank you for keeping your community safe!"]
-
-        if self.state == State.AWAITING_BLOCK:
-            self.state = State.BLOCK_RECIEVED
-            return ["Would your like to block this user?", \
+                reply += ["Mental health resources"]
+            reply += ["Thank you for keeping our community safe from bullying! Your report will be reviewed and appropriate action will be taken.", \
+            "Would you like to block this user to prevent seeing their content in the future?", \
             "1. Yes, just this account", \
-            "2. Yes, and future accounts they create", \
-            "3. No"]
+            "2. Yes, this and any future accounts they create using the same email/phone number", \
+            "3. No, I wish to continue seeing this creator's content"]
+            return reply
 
-        if self.state == State.BLOCK_RECIEVED:
+        if self.state == State.AWAITING_BLOCK_TYPE:
+            reply = []
             self.state = State.REPORT_COMPLETE
             if message.content == '1':
-                return ["This user has been blocked."]
+                reply += ["This user has been blocked."]
             elif message.content == '2':
-                return ["This user and the accounts they may create have been blocked."]
+                reply += ["This user and the accounts they may create have been blocked."]
             else:
-                return ["The user will not be blocked."]
+                reply += ["The user will not be blocked."]
+            reply += ["Thank you for your report!"]
+            return reply
 
         if self.state == State.REPORT_COMPLETE:
             return ["The report has been completed."]
