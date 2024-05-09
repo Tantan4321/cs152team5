@@ -13,8 +13,11 @@ class State(Enum):
     REPORT_COMPLETE = auto() # start: block simulated
     VIOLATION_TYPE = auto()
     WAITING_VIOLATION_RECORD = auto()
-    AWAITING_BAN_USER = auto()
+    AWAITING_BAN_POSTER = auto()
+    AWAITING_BAN_REPORTER = auto()
     AWAITING_VIOLATION_RECORD = auto()
+    AWAITING_ADVERSARIAL_DECISION = auto() # start: reviewer thinks report isn't bullying, end: decision on adversarial
+    AWAITING_ADVERSARY_RECORD = auto() # start: reviewer thinks report is adversarial, end: determine #adversarial reports
 
 class Report:
     START_KEYWORD = "report"
@@ -226,6 +229,37 @@ class Report:
                 "2. 1-3 offenses", \
                 "3. 3+ offenses"]
 
+            elif message.content == '3':
+                self.state = State.AWAITING_ADVERSARIAL_DECISION
+                return ["Is this report adversarial?: ", \
+                "1. Yes", \
+                "2. No"]
+
+        if self.state == State.AWAITING_ADVERSARIAL_DECISION:
+            if message.content == '1':
+                self.state = State.AWAITING_ADVERSARY_RECORD
+                return ["How many times has the user reported adversarial reports?: ",\
+                "1. 0-1", \
+                "2. 2-3 times", \
+                "3. 3+ times"]
+            elif message.content == '2':
+                self.state = State.REPORT_COMPLETE
+                return ["Send warning to user"]
+
+        if self.state == State.State.AWAITING_ADVERSARY_RECORD:
+            if message.content == '1':
+                self.state = State.REPORT_COMPLETE
+                return ["Send warning to user"]
+            elif message.content == '2':
+                self.state = State.REPORT_COMPLETE
+                return ["Temporarily restrict reported user's reporting priviledges"]
+            elif message.content == '3':
+                self.state = State.AWAITING_BAN_REPORTER
+                return ["Do you want to ban the user?", \
+                "1. Yes", \
+                "2. No", 
+                ]
+
 
         if self.state == State.AWAITING_VIOLATION_RECORD:
             if message.content == '1':
@@ -235,11 +269,27 @@ class Report:
                 self.state = State.REPORT_COMPLETE
                 return ["Temporarily restrict reported user's posting priviledges"]
             elif message.content == '3':
-                self.state = State.AWAITING_BAN_USER
+                self.state = State.AWAITING_BAN_POSTER
                 return ["Do you want to ban the user?", \
                 "1. Yes", \
                 "2. No", 
                 ]
+
+        if self.state == State.AWAITING_BAN_REPORTER:
+            if message.content == '1':
+                self.state = State.REPORT_COMPLETE
+                return ["Go ban them then"]
+            elif message.content == '2':
+                self.state = State.REPORT_COMPLETE
+                return ["Temporarily restrict reported user's reporting priviledges"]
+
+        if self.state == State.AWAITING_BAN_POSTER:
+            if message.content == '1':
+                self.state = State.REPORT_COMPLETE
+                return ["Go ban them then"]
+            elif message.content == '2':
+                self.state = State.REPORT_COMPLETE
+                return ["Temporarily restrict reported user's posting priviledges"]
 
         if self.state == State.REPORT_COMPLETE:
             return ["The review has been completed."]
