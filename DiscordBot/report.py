@@ -137,7 +137,7 @@ class Report:
         if self.state == State.AWAITING_VICTIM:
             self.report_summary.append('Identity of victim:' + self.victim[message.content])
             self.victim = int(message.content)
-            self.handle_bullying_report()
+            # self.handle_bullying_report()
             if message.content == '1':
                 self.state = State.AWAITING_RESOURCES
                 return ["Would you like to be redirected to a list of mental health help resources? You are not alone. (Y/N)"]
@@ -246,7 +246,7 @@ class Report:
                 self.state = State.REPORT_COMPLETE
                 return ["Send warning to user"]
 
-        if self.state == State.State.AWAITING_ADVERSARY_RECORD:
+        if self.state == State.AWAITING_ADVERSARY_RECORD:
             if message.content == '1':
                 self.state = State.REPORT_COMPLETE
                 return ["Send warning to user"]
