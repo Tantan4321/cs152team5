@@ -32,6 +32,7 @@ class Report:
         self.message = None
         self.bullying_type = None # 1: threatening/abusive messages, 2: doxxing, 3: nonconsensual images
         self.victim = None # 1: me, 2: someone I know, 3: other
+        self.msg_poster = None
 
         self.abuse_type = { 
                             '1': "Bullying",
@@ -213,6 +214,7 @@ class Report:
   
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.VIOLATION_TYPE
+            self.msg_poster = message.author
             # prompt user to select sub-category
             return ["I found this report:", "```" + message.author.name + ": " + message.content + "```", \
                     "Please enter the number associated with the type of violation: ", \
@@ -274,7 +276,8 @@ class Report:
         if self.state == State.AWAITING_VIOLATION_RECORD:
             if message.content == '1':
                 self.state = State.REPORT_COMPLETE
-                return ["Send warning to user"]
+                await self.msg_poster.send("Please don't bully people, that's bad :(")
+                return ["Warning sent!"]
             elif message.content == '2':
                 self.state = State.REPORT_COMPLETE
                 return ["Temporarily restrict reported user's posting priviledges"]
@@ -288,7 +291,7 @@ class Report:
         if self.state == State.AWAITING_BAN_REPORTER:
             if message.content == '1':
                 self.state = State.REPORT_COMPLETE
-                return ["Go ban them then"]
+                return ["Ban the user"]
             elif message.content == '2':
                 self.state = State.REPORT_COMPLETE
                 return ["Temporarily restrict reported user's reporting priviledges"]
@@ -296,7 +299,7 @@ class Report:
         if self.state == State.AWAITING_BAN_POSTER:
             if message.content == '1':
                 self.state = State.REPORT_COMPLETE
-                return ["Go ban them then"]
+                return ["Ban the user"]
             elif message.content == '2':
                 self.state = State.REPORT_COMPLETE
                 return ["Temporarily restrict reported user's posting priviledges"]
