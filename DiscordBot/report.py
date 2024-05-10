@@ -246,7 +246,8 @@ class Report:
                 "2. No"]
         
         if self.state == State.AWAITING_OTHER_VIOLATION_TYPE:
-                return ["The report has been sent to another moderation team"]
+            self.state = State.REPORT_COMPLETE
+            return ["The report has been sent to another moderation team"]
 
         if self.state == State.AWAITING_ADVERSARIAL_DECISION:
             if message.content == '1':
