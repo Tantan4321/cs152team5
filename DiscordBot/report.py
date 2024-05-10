@@ -18,6 +18,7 @@ class State(Enum):
     AWAITING_VIOLATION_RECORD = auto()
     AWAITING_ADVERSARIAL_DECISION = auto() # start: reviewer thinks report isn't bullying, end: decision on adversarial
     AWAITING_ADVERSARY_RECORD = auto() # start: reviewer thinks report is adversarial, end: determine #adversarial reports
+    AWAITING_OTHER_VIOLATION_TYPE = auto()
 
 class Report:
     START_KEYWORD = "report"
@@ -228,11 +229,21 @@ class Report:
                 "2. 1-3 offenses", \
                 "3. 3+ offenses"]
 
+            elif message.content == '2':
+                self.state = State.AWAITING_OTHER_VIOLATION_TYPE
+                return ["What is the violation type? ", \
+                "1. Spam", \
+                "2. Offensive Content", \
+                "3. Imminent Danger"]
+
             elif message.content == '3':
                 self.state = State.AWAITING_ADVERSARIAL_DECISION
                 return ["Is this report adversarial?: ", \
                 "1. Yes", \
                 "2. No"]
+        
+        if self.state == State.AWAITING_OTHER_VIOLATION_TYPE:
+                return ["The report has been sent to another moderation team"]
 
         if self.state == State.AWAITING_ADVERSARIAL_DECISION:
             if message.content == '1':
