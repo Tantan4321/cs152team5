@@ -226,7 +226,8 @@ class Report:
         if self.state == State.VIOLATION_TYPE:
             if message.content == '1':
                 self.state = State.AWAITING_VIOLATION_RECORD
-                return ["What is the reported user's violation record?: ", \
+                return ["This content has been removed because it violates our bullying policy.", \
+                "What is the reported user's violation record?: ", \
                 "1. No history of violations", \
                 "2. 1-3 offenses", \
                 "3. 3+ offenses"]
