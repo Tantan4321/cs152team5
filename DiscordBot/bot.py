@@ -110,21 +110,19 @@ class ModBot(discord.Client):
         # Only handle messages sent in the "group-#" channel
         if message.channel.name == f'group-{self.group_num}-mod':
             if message.content == Report.HELP_KEYWORD:
-                reply += "Use the `review` command to begin the moderation process.\n"
+                reply = "Use the `review` command to begin the moderation process.\n"
                 reply += "Use the `cancel` command to cancel the report process.\n"
                 await message.channel.send(reply)
                 return
 
-            author_id = message.author.id
             responses = []
 
             # Only respond to messages if they're part of a reporting flow
-            if author_id not in self.reports and not message.content.startswith(Report.REVIEW_KEYWORD):
+            if len(self.reports) == 0 and message.content.startswith(Report.REVIEW_KEYWORD):
+                await message.channel.send("No active moderation reports found!")
                 return
 
-            # If we don't currently have an active report for this user, add one
-            if author_id not in self.reports:
-                self.reports[author_id] = Report(self)
+            author_id = next(iter(self.reports))  # get the author id of the first  report
 
             # Let the report class handle this message; forward all the messages it returns to uss
             responses = await self.reports[author_id].handle_review(message)
@@ -135,7 +133,6 @@ class ModBot(discord.Client):
             if self.reports[author_id].report_complete():
                 self.reports.pop(author_id)
             return
-
 
         if not message.channel.name == f'group-{self.group_num}':
             return
