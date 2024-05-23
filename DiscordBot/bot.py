@@ -8,6 +8,8 @@ import re
 import requests
 from report import Report
 import pdb
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -139,7 +141,8 @@ class ModBot(discord.Client):
 
         # Forward the message to the mod channel
         mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+        #for now it should only forward the message if it is a violation
+        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"') 
         scores = self.eval_text(message.content)
         await mod_channel.send(self.code_format(scores))
 
@@ -149,7 +152,17 @@ class ModBot(discord.Client):
         TODO: Once you know how you want to evaluate messages in your channel, 
         insert your code here! This will primarily be used in Milestone 3. 
         '''
-        return message
+        vertexai.init(project='cs152team5', location="us-central1")
+
+        model = GenerativeModel(model_name="gemini-1.0-pro-002")
+
+        response = model.generate_content(
+            f"Would you consider the following comment a violation of platforms like instagram? Respond with only 'yes' or 'no', all lower case: {message}"
+        )
+
+        print(response.text)
+
+        return message, response.text
 
     
     def code_format(self, text):
@@ -158,8 +171,10 @@ class ModBot(discord.Client):
         evaluated, insert your code here for formatting the string to be 
         shown in the mod channel. 
         '''
-        return "Evaluated: '" + text+ "'"
-
-
+        msg, eval = text
+        if eval == 'yes':
+            return "Evaluated: '" + msg + "' as a violation"
+        return "Evaluated: '" + msg + "' as not a violation"
+    
 client = ModBot()
 client.run(discord_token)
