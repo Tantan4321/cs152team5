@@ -1,5 +1,10 @@
 *.log
 DiscordBot/tokens.json
 TABot/tokens.json
+<<<<<<< HEAD
 
 .idea/
+=======
+.DS_Store
+*.csv
+>>>>>>> saum-local
