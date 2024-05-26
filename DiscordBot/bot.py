@@ -8,6 +8,7 @@ import re
 import requests
 from report import Report
 import pdb
+import csv
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -109,6 +110,18 @@ class ModBot(discord.Client):
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
         if message.channel.name == f'group-{self.group_num}-mod':
+            if message.content.startswith("test "):
+                with open(message.content[5:]) as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    text_key = "Text"
+                    label_key = "oh_label"
+
+                    for row in reader:
+                        score = self.eval_text(row[text_key])
+                        await message.channel.send("score:"+str(score))
+                        await message.channel.send("label:"+str(row[label_key]))
+
+
             if message.content == Report.HELP_KEYWORD:
                 reply += "Use the `review` command to begin the moderation process.\n"
                 reply += "Use the `cancel` command to cancel the report process.\n"
@@ -163,6 +176,6 @@ class ModBot(discord.Client):
         '''
         return "Evaluated: '" + text+ "'"
 
-
-client = ModBot()
-client.run(discord_token)
+if __name__=="__main__":
+    client = ModBot()
+    client.run(discord_token)
