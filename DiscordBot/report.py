@@ -7,6 +7,7 @@ import json
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
 from vertexai import generative_models
+import requests
 
 
 def update_adversarial_reports(username, count):
@@ -112,6 +113,19 @@ class Report:
                     } # who the victim is dictionary, used for report summary
 
         self.report_summary = []
+    
+    async def save_image(self, image_url, image_path):
+        '''
+        Download an image from a URL and save it locally.
+        '''
+        response = requests.get(image_url)
+        image_data = response.content
+
+        # image_path = 'image.jpg'
+        with open(image_path, 'wb') as f:
+            f.write(image_data)
+
+        return image_path
 
     async def handle_message(self, message):
         '''
@@ -397,7 +411,16 @@ class Report:
 
                     parts = [self.policy_text]
                     parts.append('Reported message:' + self.report_message.content)
-                    parts.append('Explain why the text is a violation of a social media platform?')
+
+                    referenced_image_urls = [attachment.url for attachment in self.report_message.attachments if attachment.content_type.startswith('image')]
+                    
+                    if referenced_image_urls:
+                        for image_url in referenced_image_urls:
+                            image_path = await self.save_image(image_url, image_path='reference_image.jpg')
+                            parts.append('Reported image:')
+                            parts.append(Part.from_image(Image.load_from_file(image_path)))
+
+                    parts.append('Explain why the text or image is a violation of a social media platform?')
 
                     # Safety config
                     safety_config = [
@@ -421,8 +444,8 @@ class Report:
 
                     response = self.model.generate_content(parts, safety_settings=safety_config)
                     # print(['response.text', response.text])
-                    await self.msg_poster.send(response.text)
                     await self.msg_poster.send('Reported message:' + self.report_message.content)
+                    await self.msg_poster.send(response.text)
                     await self.msg_poster.send("Please don't bully people, that's bad :(")
                     reply += "Warning sent!"
                 elif num_violations < 3:
