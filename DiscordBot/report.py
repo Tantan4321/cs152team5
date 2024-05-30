@@ -124,6 +124,15 @@ class Report:
         image_urls = [attachment.url for attachment in message.attachments if attachment.content_type.startswith('image')]
         referenced_image_urls = []
 
+        vertexai.init(project='cs152team5', location="us-central1")
+        self.model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
+
+        self.policy_text = """
+                Cyberbullying Policy:
+
+                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+        """
+
         # print('image_urls', image_urls)
 
         # self.image_urls = referenced_image_urls
@@ -227,10 +236,6 @@ class Report:
             reply = []
             self.state = State.AWAITING_BLOCK_TYPE
             if message.content == "Y":
-                vertexai.init(project='cs152team5', location="us-central1")
-
-                model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
-
                 parts = []
 
                 # print('referenced_image_urls', referenced_image_urls)
@@ -314,23 +319,23 @@ class Report:
                 safety_config = [
                     generative_models.SafetySetting(
                         category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                        threshold=generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
                     ),
                     generative_models.SafetySetting(
                         category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                        threshold=generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
                     ),
                     generative_models.SafetySetting(
                         category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                        threshold=generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
                     ),
                     generative_models.SafetySetting(
                         category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                        threshold=generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
                     ),
                 ]
 
-                response = model.generate_content(parts, safety_settings=safety_config)
+                response = self.model.generate_content(parts, safety_settings=safety_config)
 
                 # reply += [' ', ]
                 reply += ["Mental health resources", response.text]
@@ -389,6 +394,35 @@ class Report:
 
                 if num_violations == 0:
                     self.state = State.REPORT_COMPLETE
+
+                    parts = [self.policy_text]
+                    parts.append('Reported message:' + self.report_message.content)
+                    parts.append('Explain why the text is a violation of a social media platform?')
+
+                    # Safety config
+                    safety_config = [
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                    ]
+
+                    response = self.model.generate_content(parts, safety_settings=safety_config)
+                    # print(['response.text', response.text])
+                    await self.msg_poster.send(response.text)
+                    await self.msg_poster.send('Reported message:' + self.report_message.content)
                     await self.msg_poster.send("Please don't bully people, that's bad :(")
                     reply += "Warning sent!"
                 elif num_violations < 3:
