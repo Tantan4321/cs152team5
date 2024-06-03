@@ -12,6 +12,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
 from vertexai import generative_models
 import io
+import csv
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -186,12 +187,15 @@ class ModBot(discord.Client):
         for example in dataset_parsed:
             if count > MAX_MESSAGES:
                 break
-            score = await self.eval_text(example[text_key])
+            _, score = await self.eval_text(example[text_key])
             predicted_label = 1 if score == 'yes' else 0
             true_label = example[label_key]
 
+            print('true_label', true_label)
+            print('true_label', type(true_label))
+
             # Update the confusion matrix
-            confusion_matrix[true_label, predicted_label] += 1
+            confusion_matrix[int(true_label), int(predicted_label)] += 1
             count += 1
             print(count)
 
@@ -211,7 +215,7 @@ class ModBot(discord.Client):
 
         return percentages.tolist()
 
-    async def eval_text(self, message_content, image_urls=None):
+    async def eval_text(self, message_content, referenced_image_urls=None):
         '''
         Evaluate the message content and image using Vertex AI.
         '''
@@ -304,6 +308,7 @@ class ModBot(discord.Client):
 
         # print('response.text', response.text)
 
+        # return message_content, response.text
         return message_content, response.text
 
     async def save_image(self, image_url, image_path):
