@@ -4,6 +4,11 @@ import re
 
 import json
 
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, Image
+from vertexai import generative_models
+import requests
+
 
 def update_adversarial_reports(username, count):
     username = str(username)
@@ -108,6 +113,19 @@ class Report:
                     } # who the victim is dictionary, used for report summary
 
         self.report_summary = []
+    
+    async def save_image(self, image_url, image_path):
+        '''
+        Download an image from a URL and save it locally.
+        '''
+        response = requests.get(image_url)
+        image_data = response.content
+
+        # image_path = 'image.jpg'
+        with open(image_path, 'wb') as f:
+            f.write(image_data)
+
+        return image_path
 
     async def handle_message(self, message):
         '''
@@ -115,6 +133,27 @@ class Report:
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
         get you started and give you a model for working with Discord. 
         '''
+        
+        # Handle image attachments in the original message
+        image_urls = [attachment.url for attachment in message.attachments if attachment.content_type.startswith('image')]
+        referenced_image_urls = []
+
+        vertexai.init(project='cs152team5', location="us-central1")
+        self.model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
+
+        self.policy_text = """
+                Cyberbullying Policy:
+
+                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+        """
+
+        # print('image_urls', image_urls)
+
+        # self.image_urls = referenced_image_urls
+        # # Handle image attachments in the referenced message (if any)
+        if message.reference:
+            referenced_message = await message.channel.fetch_message(message.reference.message_id)
+            referenced_image_urls = [attachment.url for attachment in referenced_message.attachments if attachment.content_type.startswith('image')]
 
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
@@ -148,15 +187,23 @@ class Report:
             self.report_summary.append('Reported message:' + self.report_message.content)
             self.msg_poster = message.author
 
+            referenced_image_urls = [attachment.url for attachment in self.report_message.attachments if attachment.content_type.startswith('image')]
+
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.AWAITING_ABUSE_TYPE
             # prompt user to select sub-category
-            return ["I found this message:", "```" + self.report_message.author.name + ": " + self.report_message.content + "```", \
-                    "Please enter the number associated with your reason for reporting this post: ", \
+
+            return_list = ["I found this message:", "```" + self.report_message.author.name + ": " + self.report_message.content + "```"]
+            if referenced_image_urls:
+                for url in referenced_image_urls:
+                    return_list.append(f'Forwarded image:\n{message.author.name}: {url}')
+            return_list.extend(["Please enter the number associated with your reason for reporting this post: ", \
                     "1. Bullying", \
                     "2. Spam", \
                     "3. Offensive Content", \
-                    "4. Immenent Danger"]
+                    "4. Immenent Danger"])
+
+            return return_list
 
         if self.state == State.AWAITING_ABUSE_TYPE:
             self.report_summary.append('Abuse type:' + self.abuse_type[message.content])
@@ -203,7 +250,109 @@ class Report:
             reply = []
             self.state = State.AWAITING_BLOCK_TYPE
             if message.content == "Y":
-                reply += ["Mental health resources"]
+                parts = []
+
+                # print('referenced_image_urls', referenced_image_urls)
+                # print('image_urls', image_urls)
+                
+                for image_url in referenced_image_urls:
+                    image_path = await self.save_image(image_url, image_path='reference_image.jpg')
+                    parts.append(Part.from_image(Image.load_from_file(image_path)))
+                
+                for image_url in image_urls:
+                    image_path = await self.save_image(image_url, image_path='image.jpg')
+                    parts.append(Part.from_image(Image.load_from_file(image_path)))
+
+                # # Download images and add them to the parts list
+                # for image_url in referenced_image_urls:
+                #     image_path = await self.save_image(image_url, image_path='reference_image.jpg')
+                #     parts.append(Part.from_image(Image.load_from_file(image_path)))
+
+                mental_health_resources = """
+                            Mental Health Resources
+
+                            National Suicide Prevention Lifeline (U.S.)
+
+                            Phone: 1-800-273-TALK (1-800-273-8255)
+                            Website: suicidepreventionlifeline.org
+                            Available 24/7 for free and confidential support.
+                            
+                            SAMHSA’s National Helpline
+
+                            Phone: 1-800-662-HELP (1-800-662-4357)
+                            Website: samhsa.gov/find-help/national-helpline
+                            Free, confidential, 24/7, 365-day-a-year treatment referral and information service for individuals and families facing mental and/or substance use disorders.
+                            
+                            The Trevor Project (LGBTQ+ Youth)
+
+                            Phone: 1-866-488-7386
+                            Text: Text "START" to 678678
+                            Website: thetrevorproject.org
+                            Provides crisis intervention and suicide prevention services to LGBTQ+ youth.
+
+                            Trans Lifeline
+
+                            Phone: 1-877-565-8860
+                            Website: translifeline.org
+                            Provides support for transgender people in crisis.
+
+                            RAINN (Rape, Abuse & Incest National Network)
+
+                            Phone: 1-800-656-HOPE (1-800-656-4673)
+                            Website: rainn.org
+                            The nation's largest anti-sexual violence organization. Provides resources and support for victims of sexual violence.
+                            
+                            Cyber Civil Rights Initiative (Revenge Porn Helpline)
+
+                            Phone: 1-844-878-2274
+                            Website: cybercivilrights.org
+                            Offers support and legal information for victims of nonconsensual pornography.
+                            
+                            Boys Town National Hotline
+
+                            Phone: 1-800-448-3000
+                            Website: boystown.org/hotline
+                            Provides crisis intervention and counseling services for children and families.
+                            Additional Resources
+
+                """
+                parts.append('Summary: ')
+                parts.extend(self.report_summary)
+                parts.append(mental_health_resources)
+
+                # parts.append()
+
+                # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."
+
+                # policy_text += f"Given the resources and "
+                parts.append(f"Given the resources and the report summary, can you select the relevant mental health resources and return their information? Only select up to 3 resources")
+                # parts.append(f"Would you consider the following comment a violation of platforms like instagram given the policy above? Respond with only 'yes' or 'no', all lower case: {message_content}")
+
+
+                # Safety config
+                safety_config = [
+                    generative_models.SafetySetting(
+                        category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    generative_models.SafetySetting(
+                        category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    generative_models.SafetySetting(
+                        category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    generative_models.SafetySetting(
+                        category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                ]
+
+                response = self.model.generate_content(parts, safety_settings=safety_config)
+
+                # reply += [' ', ]
+                reply += ["Mental health resources", response.text]
             reply += ["Thank you for keeping our community safe from bullying! Your report will be reviewed and appropriate action will be taken.", \
             "Would you like to block this user to prevent seeing their content in the future?", \
             "1. Yes, just this account", \
@@ -259,6 +408,44 @@ class Report:
 
                 if num_violations == 0:
                     self.state = State.REPORT_COMPLETE
+
+                    parts = [self.policy_text]
+                    parts.append('Reported message:' + self.report_message.content)
+
+                    referenced_image_urls = [attachment.url for attachment in self.report_message.attachments if attachment.content_type.startswith('image')]
+                    
+                    if referenced_image_urls:
+                        for image_url in referenced_image_urls:
+                            image_path = await self.save_image(image_url, image_path='reference_image.jpg')
+                            parts.append('Reported image:')
+                            parts.append(Part.from_image(Image.load_from_file(image_path)))
+
+                    parts.append('Explain why the text or image is a violation of a social media platform?')
+
+                    # Safety config
+                    safety_config = [
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                        generative_models.SafetySetting(
+                            category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                            threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+                        ),
+                    ]
+
+                    response = self.model.generate_content(parts, safety_settings=safety_config)
+                    # print(['response.text', response.text])
+                    await self.msg_poster.send('Reported message:' + self.report_message.content)
+                    await self.msg_poster.send(response.text)
                     await self.msg_poster.send("Please don't bully people, that's bad :(")
                     reply += "Warning sent!"
                 elif num_violations < 3:

@@ -10,10 +10,8 @@ from report import Report
 import pdb
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
+from vertexai import generative_models
 import io
-# from PIL import Image
-# from google.cloud.vision import Image
-import csv
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -149,7 +147,9 @@ class ModBot(discord.Client):
         await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
 
         # Handle image attachments in the original message
+        image_urls = [attachment.url for attachment in message.attachments if attachment.content_type.startswith('image')]
 
+        referenced_image_urls = None
         # # Handle image attachments in the referenced message (if any)
         referenced_image_urls = None
         if message.reference:
@@ -160,7 +160,12 @@ class ModBot(discord.Client):
                 for url in referenced_image_urls:
                     await mod_channel.send(f'Forwarded referenced image:\n{referenced_message.author.name}: {url}')
 
-        scores = await self.eval_text(message.content, referenced_image_urls)
+        # Forward images from the original message to the mod channel
+        if image_urls:
+            for url in image_urls:
+                await mod_channel.send(f'Forwarded image:\n{message.author.name}: {url}')
+
+        scores = await self.eval_text(message.content, image_urls, referenced_image_urls)
         await mod_channel.send(self.code_format(scores))
 
         # # # Handle image attachments in the referenced message (if any)
@@ -212,29 +217,103 @@ class ModBot(discord.Client):
         '''
         vertexai.init(project='cs152team5', location="us-central1")
 
+        print('message_content', message_content)
+
         model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
 
         parts = []
 
-        if image_urls is not None:
-            # Download images and add them to the parts list
-            for image_url in image_urls:
-                image_path = await self.save_image(image_url)
+        # Download images and add them to the parts list
+        if referenced_image_urls:
+            for image_url in referenced_image_urls:
+                image_path = await self.save_image(image_url, image_path='reference_image.jpg')
                 parts.append(Part.from_image(Image.load_from_file(image_path)))
+        
+        # parts.append('Response image:')
+        # # Download images and add them to the parts list
+        # for image_url in image_urls:
+        #     image_path = await self.save_image(image_url, image_path='image.jpg')
+        #     parts.append(Part.from_image(Image.load_from_file(image_path)))
 
-        parts.append(
-            f"Would you consider the following comment a violation of platforms like instagram? Respond with only 'yes' or 'no', all lower case: {message_content}")
+        # policy_text = """
+        #         Cyberbullying Policy:
 
-        response = model.generate_content(parts)
+        #         Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+
+        #         We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
+
+        #         Threatening or abusive messages can include but are not limited to:
+        #         - Offensive name calling
+        #         - Spreading of false rumors
+        #         - Degrading statements about appearance
+        #         - Threats of physical harm
+        #         - Negative comments in reference to an individual’s sexual identity
+        #         - Incitements to harm oneself
+        #         - Encouragement of others to harass an individual
+
+        #         Exposing the private information of an individual can include but is not limited to:
+        #         - Threatening to or revealing an individual’s address, phone number, or email address
+
+        #         Sharing a nonconsensual image with malicious intent includes but is not limited to:
+        #         - Sharing sexually explicit/thematic images without consent (18+)
+        #         - Sharing images of an individual in a degrading/embarrassing context or situation
+        #         - Sharing any photo of an individual along with text meant to degrade, harass, or share private information about them
+        #         - Photoshopping or using deepfake/AI to create or facilitate any of the above scenarios
+
+        #         We recognize that context is necessary in certain scenarios to understand the intent and impact behind a given post. Our reporting system allows for victims of cyberbullying posts to identify themselves when reporting, and our moderators take this into account when making decisions.
+        # """
+
+
+        policy_text = """
+                Cyberbullying Policy:
+
+                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+                We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
+        """
+
+        # parts.append(policy_text)
+
+        # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."
+
+        policy_text += f"Would you consider the following comment a violation of platforms given the policy above? comment: {message_content}, respond with only one 'yes' or one 'no' and give explanation"
+        parts.append(policy_text)
+        # parts.append(f"Would you consider the following comment a violation of platforms like instagram given the policy above? Respond with only 'yes' or 'no', all lower case: {message_content}")
+
+
+        # Safety config
+        safety_config = [
+            generative_models.SafetySetting(
+                category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            generative_models.SafetySetting(
+                category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            generative_models.SafetySetting(
+                category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            generative_models.SafetySetting(
+                category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+            ),
+        ]
+
+        response = model.generate_content(parts, safety_settings=safety_config)
+
+        # print('response.text', response.text)
+
         return message_content, response.text
 
-    async def save_image(self, image_url):
+    async def save_image(self, image_url, image_path):
         '''
         Download an image from a URL and save it locally.
         '''
         response = requests.get(image_url)
         image_data = response.content
-        image_path = 'image.jpg'
+
+        # image_path = 'image.jpg'
         with open(image_path, 'wb') as f:
             f.write(image_data)
 
@@ -245,7 +324,9 @@ class ModBot(discord.Client):
         Format the evaluated message and result.
         '''
         msg, eval = text
-        if eval.lower().strip() == 'yes':
+        eval_cleaned = eval.lower().replace(' ', '').strip()
+        print('eval_cleaned'+eval)
+        if 'yes' in eval_cleaned:
             return f"Evaluated: '{msg}' as a violation"
         return f"Evaluated: '{msg}' as not a violation"
 
