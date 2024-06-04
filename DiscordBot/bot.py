@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import requests
-from report import Report
+from report import Report, State
 import pdb
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
@@ -167,7 +167,20 @@ class ModBot(discord.Client):
             for url in image_urls:
                 await mod_channel.send(f'Forwarded image:\n{message.author.name}: {url}')
 
-        scores = await self.eval_text(message.content, image_urls, referenced_image_urls)
+        scores = await self.eval_text(message.content, referenced_image_urls)
+        if scores[1].startswith('yes'):
+            print("Found a violation msg")
+            author_id = message.author.id
+            if author_id not in self.reports:
+                print("creating report")
+                self.reports[author_id] = Report(self)
+                self.reports[author_id].report_message = message
+                self.reports[author_id].msg_poster = message.author
+                self.reports[author_id].state = State.AWAITING_REVIEW
+
+
+
+
         await mod_channel.send(self.code_format(scores))
 
         # # # Handle image attachments in the referenced message (if any)

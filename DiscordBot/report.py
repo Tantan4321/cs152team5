@@ -113,6 +113,11 @@ class Report:
                     } # who the victim is dictionary, used for report summary
 
         self.report_summary = []
+        self.policy_text = """
+                Cyberbullying Policy:
+
+                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+        """
     
     async def save_image(self, image_url, image_path):
         '''
@@ -140,12 +145,6 @@ class Report:
 
         vertexai.init(project='cs152team5', location="us-central1")
         self.model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
-
-        self.policy_text = """
-                Cyberbullying Policy:
-
-                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
-        """
 
         # print('image_urls', image_urls)
 
