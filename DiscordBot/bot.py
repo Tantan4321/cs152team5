@@ -167,7 +167,7 @@ class ModBot(discord.Client):
             for url in image_urls:
                 await mod_channel.send(f'Forwarded image:\n{message.author.name}: {url}')
 
-        scores = await self.eval_text(message.content, referenced_image_urls)
+        scores = await self.eval_text(message.content, image_urls, referenced_image_urls)
         if scores[1].startswith('yes'):
             print("Found a violation msg")
             author_id = message.author.id
@@ -246,7 +246,7 @@ class ModBot(discord.Client):
 
         return percentages.tolist()
 
-    async def eval_text(self, message_content, referenced_image_urls=None):
+    async def eval_text(self, message_content, image_urls=None, referenced_image_urls=None):
         '''
         Evaluate the message content and image using Vertex AI.
         '''
@@ -266,9 +266,9 @@ class ModBot(discord.Client):
         
         # parts.append('Response image:')
         # # Download images and add them to the parts list
-        # for image_url in image_urls:
-        #     image_path = await self.save_image(image_url, image_path='image.jpg')
-        #     parts.append(Part.from_image(Image.load_from_file(image_path)))
+        for image_url in image_urls:
+            image_path = await self.save_image(image_url, image_path='image.jpg')
+            parts.append(Part.from_image(Image.load_from_file(image_path)))
 
         policy_text = """
                 Cyberbullying Policy:
