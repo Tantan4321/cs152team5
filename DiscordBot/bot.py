@@ -178,9 +178,6 @@ class ModBot(discord.Client):
                 self.reports[author_id].msg_poster = message.author
                 self.reports[author_id].state = State.AWAITING_REVIEW
 
-
-
-
         await mod_channel.send(self.code_format(scores))
 
         # # # Handle image attachments in the referenced message (if any)
@@ -192,7 +189,7 @@ class ModBot(discord.Client):
         #             await mod_channel.send(f'Forwarded referenced image:\n{referenced_message.author.name}: {url}')
 
     async def eval_dataset(self, message, dataset_parsed, text_key, label_key):
-        MAX_MESSAGES = 1000
+        MAX_MESSAGES = 100
         count = 1
 
         # Initialize the confusion matrix
@@ -203,11 +200,13 @@ class ModBot(discord.Client):
                 break
             print('(example[text_key]', example[text_key])
             _, score = await self.eval_text(example[text_key])
+            print('score', score)
+
             predicted_label = 1 if score == 'yes' else 0
             true_label = example[label_key]
 
             print('true_label', true_label)
-            print('true_label', type(true_label))
+            print('type true_label', type(true_label))
 
             # Update the confusion matrix
             confusion_matrix[int(true_label), int(predicted_label)] += 1
@@ -245,111 +244,362 @@ class ModBot(discord.Client):
         plt.show()
 
         return percentages.tolist()
-
+    
     async def eval_text(self, message_content, image_urls=None, referenced_image_urls=None):
-        '''
-        Evaluate the message content and image using Vertex AI.
-        '''
-        vertexai.init(project='cs152team5', location="us-central1")
 
         print('message_content', message_content)
 
-        model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
+        from openai import OpenAI
+        client = OpenAI(
+            # This is the default and can be omitted
+            api_key='YOUR_OPEN_AI_KEY',
+        )
 
-        parts = []
+        # Function to get the response from OpenAI for each step
+        def get_response(prompt):
+            response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": prompt,
+                        },
+                    ],
+                }
+            ],
+            max_tokens=300,
+            )
+            return response
 
-        # Download images and add them to the parts list
-        if referenced_image_urls:
-            for image_url in referenced_image_urls:
-                image_path = await self.save_image(image_url, image_path='reference_image.jpg')
-                parts.append(Part.from_image(Image.load_from_file(image_path)))
-        
-        # parts.append('Response image:')
-        # # Download images and add them to the parts list
-        for image_url in image_urls:
-            image_path = await self.save_image(image_url, image_path='image.jpg')
-            parts.append(Part.from_image(Image.load_from_file(image_path)))
-
-        policy_text = """
-                Cyberbullying Policy:
-
-                Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
-
-                We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
-
-                Threatening or abusive messages can include but are not limited to:
-                - Offensive name calling
-                - Spreading of false rumors
-                - Degrading statements about appearance
-                - Threats of physical harm
-                - Negative comments in reference to an individual’s sexual identity
-                - Incitements to harm oneself
-                - Encouragement of others to harass an individual
-
-                Exposing the private information of an individual can include but is not limited to:
-                - Threatening to or revealing an individual’s address, phone number, or email address
-
-                Sharing a nonconsensual image with malicious intent includes but is not limited to:
-                - Sharing sexually explicit/thematic images without consent (18+)
-                - Sharing images of an individual in a degrading/embarrassing context or situation
-                - Sharing any photo of an individual along with text meant to degrade, harass, or share private information about them
-                - Photoshopping or using deepfake/AI to create or facilitate any of the above scenarios
-
-                We recognize that context is necessary in certain scenarios to understand the intent and impact behind a given post. Our reporting system allows for victims of cyberbullying posts to identify themselves when reporting, and our moderators take this into account when making decisions.
-        """
-
+        policy_text = ''
 
         # policy_text = """
         #         Cyberbullying Policy:
 
         #         Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+
         #         We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
+
+        #         Threatening or abusive messages can include but are not limited to:
+        #         - Offensive name calling
+        #         - Spreading of false rumors
+        #         - Degrading statements about appearance
+        #         - Threats of physical harm
+        #         - Negative comments in reference to an individual’s sexual identity
+        #         - Incitements to harm oneself
+        #         - Encouragement of others to harass an individual
+
+        #         Exposing the private information of an individual can include but is not limited to:
+        #         - Threatening to or revealing an individual’s address, phone number, or email address
+
+        #         Sharing a nonconsensual image with malicious intent includes but is not limited to:
+        #         - Sharing sexually explicit/thematic images without consent (18+)
+        #         - Sharing images of an individual in a degrading/embarrassing context or situation
+        #         - Sharing any photo of an individual along with text meant to degrade, harass, or share private information about them
+        #         - Photoshopping or using deepfake/AI to create or facilitate any of the above scenarios
+
+        #         We recognize that context is necessary in certain scenarios to understand the intent and impact behind a given post. Our reporting system allows for victims of cyberbullying posts to identify themselves when reporting, and our moderators take this into account when making decisions.
+
+        #         Consider that there are other forms of violation and the above policy may not cover all types of abuses. 
         # """
 
-        # parts.append(policy_text)
+        # try:
 
-        # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."
+        print('referenced_image_urls', referenced_image_urls)
+        print('image_urls', image_urls)
 
-        policy_text += f"Would you consider the following comment a cyberbullying violation? comment: {message_content}, respond with only one 'yes' or one 'no' and nothing else"
-        parts.append(policy_text)
-        # parts.append(f"Would you consider the following comment a violation of platforms like instagram given the policy above? Respond with only 'yes' or 'no', all lower case: {message_content}")
+        if referenced_image_urls:
+            if image_urls:
+            
+            # Step 1: Initial Prompt
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                "type": "text",
+                                "text": policy_text,
+                                },
+                                {
+                                "type": "text",
+                                "text": "Let's say the first image is a instagram post and the second image is a response to the post, Analyze the following text and determine if it contains any elements of cyberbullying.",
+                                },
+                                {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": referenced_image_urls[0],
+                                },
+                                },
+                                {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": image_urls[0],
+                                },
+                                },
+                            ],
+                            }
+                    ],
+                    max_tokens=300,
+                )
+            
+                # Step 2: Chain of Thought Prompts
+                steps = [
+                    "Identify Potentially Harmful Language in the text. List any words or phrases that could be harmful.",
+                    "Analyze the context and intent of the identified harmful language. Explain why it is considered harmful.",
+                    "Evaluate the text for cyberbullying. Determine if the text as a whole can be classified as cyberbullying.",
+                    "Provide a detailed explanation of why the text is or isn't considered cyberbullying.", 
+                    "Let's say the first image is a instagram post and the second image is a response to the post, would you consider the response a violation of cyberbullying policy? Please with only 'yes' or 'no' "
+                ]
+            
 
+                # Get responses for each step in the chain
+                full_response = ""
+                current_prompt = ''
+                for step in steps:
+                    step_prompt = f"{current_prompt}\n\nStep: {step}"
+                    response = get_response(step_prompt)
+                    print('response', response)
+                    full_response += f"\n\n{step}:\n{response}"
+                    current_prompt = f"{step_prompt}\n\nResponse: {response}"
 
-        # Safety config
-        safety_config = [
-            generative_models.SafetySetting(
-                category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
-            ),
-            generative_models.SafetySetting(
-                category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
-            ),
-            generative_models.SafetySetting(
-                category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
-            ),
-            generative_models.SafetySetting(
-                category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
-            ),
-        ]
+                # response = client.chat.completions.create(
+                # model="gpt-4o",
+                # messages=[
+                #     {
+                #     "role": "user",
+                #     "content": [
+                #         {
+                #         "type": "text",
+                #         "text": policy_text,
+                #         },
+                #         {
+                #         "type": "text",
+                #         "text": "Let's say the first image is a instagram post and the second image is a response to the post, would you consider the response a violation of cyberbullying policy? Please start your answer with a 'yes' or 'no', your first word must be a 'yes' or 'no' make sure there's a space after the first word",
+                #         },
+                #         {
+                #         "type": "image_url",
+                #         "image_url": {
+                #             "url": referenced_image_urls[0],
+                #         },
+                #         },
+                #         {
+                #         "type": "image_url",
+                #         "image_url": {
+                #             "url": image_urls[0],
+                #         },
+                #         },
+                #     ],
+                #     }
+                # ],
+                # max_tokens=300,
+                # )
 
-        try:
-            response = model.generate_content(parts, safety_settings=safety_config)
-            print('response.text', response.text)
-            first_word = response.text.split()[0].lower()
-            print('first_word', first_word)
-            # return message_content, response.text
-            return message_content, first_word
-        except Exception as e:      
-            # response.text = 'yes'
-            return message_content, 'yes'
+                print('response', response)
+                first_word = response.choices[0].message.content.strip().lower().split(' ')[0]
+            else:
+                response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": policy_text,
+                        },
+                        {
+                        "type": "text",
+                        "text": "Let's say the first image is a instagram post and the second text is a response to the post, would you consider the response a violation of cyberbullying policy? Please answer with only a 'yes' or 'no'",
+                        },
+                        {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": referenced_image_urls[0],
+                        },
+                        },
+                        {
+                        "type": "text",
+                        "text": message_content,
+                        },
+                    ],
+                    }
+                ],
+                max_tokens=300,
+                )
+                print('response', response)
+
+            first_word = response.choices[0].message.content.strip().lower().split(' ')[0]
+        elif image_urls:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": policy_text,
+                        },
+                        {
+                        "type": "text",
+                        "text": "Let's say the image is a instagram post, would you consider the response a violation of cyberbullying policy? Please answer with only a 'yes' or 'no'",
+                        },
+                        {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_urls[0],
+                        },
+                        },
+                    ],
+                    }
+                ],
+                max_tokens=300,
+                )
+            print('response.choices[0].message.content.strip()', response.choices[0].message.content.strip())
+            first_word = response.choices[0].message.content.strip().lower().split(' ')[0]
+        else:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": policy_text,
+                        },
+                        {
+                        "type": "text",
+                        "text": "Let's say the following is a comment on twitter, would you consider the response a violation of cyberbullying policy? Please answer with only a 'yes' or 'no'",
+                        },
+                        {
+                        "type": "text",
+                        "text": message_content,
+                        },
+                    ],
+                    }
+                ],
+                max_tokens=300,
+                )
+            print('response.choices[0].message.content.strip()', response.choices[0].message.content.strip())
+            first_word = response.choices[0].message.content.strip().lower().split(' ')[0]
+
+        return message_content, first_word
+        # except Exception as e:
+        #     print(f"Error: {e}")
+        #     return message_content, 'no'
+
+    # async def eval_text(self, message_content, image_urls=None, referenced_image_urls=None):
+    #     '''
+    #     Evaluate the message content and image using Vertex AI.
+    #     '''
+    #     vertexai.init(project='cs152team5', location="us-central1")
+
+    #     print('message_content', message_content)
+
+    #     model = GenerativeModel(model_name="gemini-1.0-pro-vision-001")
+
+    #     parts = []
+
+    #     # Download images and add them to the parts list
+    #     if referenced_image_urls:
+    #         for image_url in referenced_image_urls:
+    #             image_path = await self.save_image(image_url, image_path='reference_image.jpg')
+    #             parts.append(Part.from_image(Image.load_from_file(image_path)))
         
-        # print('response.text', response.text)
+    #     # parts.append('Response image:')
+    #     # # Download images and add them to the parts list
+    #     for image_url in image_urls:
+    #         image_path = await self.save_image(image_url, image_path='image.jpg')
+    #         parts.append(Part.from_image(Image.load_from_file(image_path)))
 
-        # return message_content, response.text
-        # return message_content, response.text
+    #     policy_text = """
+    #             Cyberbullying Policy:
+
+    #             Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+
+    #             We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
+
+    #             Threatening or abusive messages can include but are not limited to:
+    #             - Offensive name calling
+    #             - Spreading of false rumors
+    #             - Degrading statements about appearance
+    #             - Threats of physical harm
+    #             - Negative comments in reference to an individual’s sexual identity
+    #             - Incitements to harm oneself
+    #             - Encouragement of others to harass an individual
+
+    #             Exposing the private information of an individual can include but is not limited to:
+    #             - Threatening to or revealing an individual’s address, phone number, or email address
+
+    #             Sharing a nonconsensual image with malicious intent includes but is not limited to:
+    #             - Sharing sexually explicit/thematic images without consent (18+)
+    #             - Sharing images of an individual in a degrading/embarrassing context or situation
+    #             - Sharing any photo of an individual along with text meant to degrade, harass, or share private information about them
+    #             - Photoshopping or using deepfake/AI to create or facilitate any of the above scenarios
+
+    #             We recognize that context is necessary in certain scenarios to understand the intent and impact behind a given post. Our reporting system allows for victims of cyberbullying posts to identify themselves when reporting, and our moderators take this into account when making decisions.
+    #     """
+
+
+    #     # policy_text = """
+    #     #         Cyberbullying Policy:
+
+    #     #         Cyberbullying is strictly prohibited on this platform. This includes content that targets an individual (including by name, handle, or image, regardless of whether or not that individual is directly tagged in the post itself) with one or more threatening or abusive messages, doxxes or exposes private information about an individual, and/or shares one or more nonconsensual images of an individual with malicious intent.
+    #     #         We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
+    #     # """
+
+    #     # policy_text = ''
+
+    #     # parts.append(policy_text)
+
+    #     # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."
+
+    #     policy_text += f"Would you consider the following comment a cyberbullying violation? comment: {message_content}, respond with only one 'yes' or one 'no' and nothing else"
+    #     parts.append(policy_text)
+    #     # parts.append(f"Would you consider the following comment a violation of platforms like instagram given the policy above? Respond with only 'yes' or 'no', all lower case: {message_content}")
+
+
+    #     # Safety config
+    #     safety_config = [
+    #         generative_models.SafetySetting(
+    #             category=generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    #             threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+    #         ),
+    #         generative_models.SafetySetting(
+    #             category=generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT,
+    #             threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+    #         ),
+    #         generative_models.SafetySetting(
+    #             category=generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    #             threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+    #         ),
+    #         generative_models.SafetySetting(
+    #             category=generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    #             threshold=generative_models.HarmBlockThreshold.BLOCK_NONE,
+    #         ),
+    #     ]
+
+    #     try:
+    #         response = model.generate_content(parts, safety_settings=safety_config)
+    #         print('response.text', response.text)
+    #         first_word = response.text.split()[0].lower()
+    #         print('first_word', first_word)
+    #         # return message_content, response.text
+    #         return message_content, first_word
+    #     except Exception as e:      
+    #         # response.text = 'yes'
+    #         return message_content, 'yes'
+        
+    #     # print('response.text', response.text)
+
+    #     # return message_content, response.text
+    #     # return message_content, response.text
 
     async def save_image(self, image_url, image_path):
         '''
