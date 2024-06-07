@@ -306,8 +306,6 @@ class ModBot(discord.Client):
         #         We recognize that public figures (define) are in a unique position on our platform and that it is in the public interest to allow for some level of discourse and criticism on these figures. Therefore, we do permit some negative or critical comments about public figures. However, posts that constitute significant bullying (i.e., threatening to or following through with doxxing an individual or expressing a desire to harm an individual) are not permitted against public figures.
         # """
 
-        # policy_text = ''
-
         # parts.append(policy_text)
 
         # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."

@@ -275,48 +275,109 @@ class Report:
                             Phone: 1-800-273-TALK (1-800-273-8255)
                             Website: suicidepreventionlifeline.org
                             Available 24/7 for free and confidential support.
-
+                            
                             National Eating Disorders Association (NEDA)
-
+                            
                             Phone: 1-800-931-2237
                             Website: nationaleatingdisorders.org
-                            Description: Offers support, resources, and treatment options for individuals affected by eating disorders and body image issues.
+                            Offers support, resources, and treatment options for individuals affected by eating disorders and body image issues.
                             
                             Eating Disorders Anonymous (EDA)
-
+                            
                             Website: eatingdisordersanonymous.org
-                            Description: Provides fellowship for individuals seeking recovery from eating disorders, following a 12-step program.
+                            Provides fellowship for individuals seeking recovery from eating disorders, following a 12-step program.
                             
                             Body Positive
-
+                            
                             Website: thebodypositive.org
-                            Description: Promotes positive body image and self-love through educational resources and community support.
+                            Promotes positive body image and self-love through educational resources and community support.
                             
                             Project HEAL
-
+                            
                             Website: theprojectheal.org
-                            Description: Provides access to treatment and support for those struggling with eating disorders, particularly for individuals who face financial and insurance barriers.
-                           
+                            Provides access to treatment and support for those struggling with eating disorders, particularly for individuals who face financial and insurance barriers.
+                            
                             ANAD (National Association of Anorexia Nervosa and Associated Disorders)
-
+                            
                             Phone: 1-888-375-7767
                             Website: anad.org
-                            Description: Offers free support groups, mentorship programs, and educational resources for individuals affected by eating disorders.
+                            Offers free support groups, mentorship programs, and educational resources for individuals affected by eating disorders.
                             
                             Binge Eating Disorder Association (BEDA)
-
+                            
                             Website: bedaonline.com
-                            Description: Provides support and resources specifically for individuals struggling with binge eating disorder.
+                            Provides support and resources specifically for individuals struggling with binge eating disorder.
                             
                             Mental Health America (MHA) - Body Image Resources
-
+                            
                             Website: mhanational.org
-                            Description: Offers information and resources on body image and its impact on mental health.
+                            Offers information and resources on body image and its impact on mental health.
                             
                             The Body Image Movement
-
+                            
                             Website: bodyimagemovement.com
-                            Description: Advocates for positive body image and self-acceptance through education and community engagement.
+                            Advocates for positive body image and self-acceptance through education and community engagement.
+                            
+                            988 Suicide and Crisis Lifeline
+                            
+                            Phone: 988
+                            Website: 988lifeline.org
+                            Provides 24/7 access to trained crisis counselors offering free and confidential support for people in suicidal crisis or emotional distress.
+                            
+                            Crisis Text Line
+                            
+                            Text: "Home" to 741-741
+                            Website: crisistextline.org
+                            Offers support for any crisis via text, helping individuals move from a hot moment to a cool moment.
+                            
+                            SAMHSA's National Helpline
+                            
+                            Phone: 1-800-662-HELP (4357)
+                            Website: samhsa.gov/find-help/national-helpline
+                            A free, confidential, 24/7, treatment referral and information service for individuals and families facing mental and/or substance use disorders. Available in English and Spanish.
+                            
+                            Teen Line
+                            
+                            Phone: 1-800-852-8336
+                            Text: "TEEN" to 839-863
+                            Website: teenline.org
+                            Provides support for teens by teens on various issues, ensuring non-judgmental listening and practical solutions.
+                            
+                            The Trevor Project
+                            
+                            Phone: 1-866-488-7386
+                            Text: "START" to 678-678
+                            Website: thetrevorproject.org
+                            Provides crisis intervention and suicide prevention services to LGBTQ+ young people under 25.
+                            
+                            California Peer-Run Warm Line
+                            
+                            Phone: 1-855-845-7415
+                            Website: mentalhealthsf.org/peer-run-warmline
+                            Offers peer support and assistance for mental and emotional health issues.
+                            
+                            LGBTQ+ National Youth Talkline
+                            
+                            Phone: 1-800-246-7743
+                            Website: glbthotline.org/youth-talkline.html
+                            Provides confidential peer-support, information, and resources for LGBTQ+ youth under 25.
+                            
+                            California Youth Crisis Line
+                            
+                            Phone: 1-800-843-5200
+                            Website: calyouth.org
+                            Provides crisis intervention and referrals for youth ages 12-24 and their supporters, available 24/7.
+                            
+                            California Parent & Youth Helpline
+                            
+                            Phone: 1-855-427-2736
+                            Website: caparentyouthhelpline.org
+                            Offers support for parenting, mental health, and family issues in multiple languages, provided by Parents Anonymous® Inc.
+                            
+                            Together for Wellness
+                            
+                            Website: calhope.semel.ucla.edu
+                            Description: A collaborative effort offering a set of digital resources (apps, websites, articles, videos) to help people through challenging times.
                 """
 
                 parts.append('Summary: ')
