@@ -319,6 +319,8 @@ class Report:
                 parts.extend(self.report_summary)
                 parts.append(mental_health_resources)
 
+                #test
+
                 # parts.append()
 
                 # policy_text += f"Would you consider the image after Response image a violation of the policy if there is an image? If there is no image would you consider the following comment a violation of platforms like instagram given the policy above? {message_content}, respond with only one 'yes' or one 'no' nothing else."
