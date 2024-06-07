@@ -275,46 +275,50 @@ class Report:
                             Phone: 1-800-273-TALK (1-800-273-8255)
                             Website: suicidepreventionlifeline.org
                             Available 24/7 for free and confidential support.
+
+                            National Eating Disorders Association (NEDA)
+
+                            Phone: 1-800-931-2237
+                            Website: nationaleatingdisorders.org
+                            Description: Offers support, resources, and treatment options for individuals affected by eating disorders and body image issues.
                             
-                            SAMHSA’s National Helpline
+                            Eating Disorders Anonymous (EDA)
 
-                            Phone: 1-800-662-HELP (1-800-662-4357)
-                            Website: samhsa.gov/find-help/national-helpline
-                            Free, confidential, 24/7, 365-day-a-year treatment referral and information service for individuals and families facing mental and/or substance use disorders.
+                            Website: eatingdisordersanonymous.org
+                            Description: Provides fellowship for individuals seeking recovery from eating disorders, following a 12-step program.
                             
-                            The Trevor Project (LGBTQ+ Youth)
+                            Body Positive
 
-                            Phone: 1-866-488-7386
-                            Text: Text "START" to 678678
-                            Website: thetrevorproject.org
-                            Provides crisis intervention and suicide prevention services to LGBTQ+ youth.
-
-                            Trans Lifeline
-
-                            Phone: 1-877-565-8860
-                            Website: translifeline.org
-                            Provides support for transgender people in crisis.
-
-                            RAINN (Rape, Abuse & Incest National Network)
-
-                            Phone: 1-800-656-HOPE (1-800-656-4673)
-                            Website: rainn.org
-                            The nation's largest anti-sexual violence organization. Provides resources and support for victims of sexual violence.
+                            Website: thebodypositive.org
+                            Description: Promotes positive body image and self-love through educational resources and community support.
                             
-                            Cyber Civil Rights Initiative (Revenge Porn Helpline)
+                            Project HEAL
 
-                            Phone: 1-844-878-2274
-                            Website: cybercivilrights.org
-                            Offers support and legal information for victims of nonconsensual pornography.
+                            Website: theprojectheal.org
+                            Description: Provides access to treatment and support for those struggling with eating disorders, particularly for individuals who face financial and insurance barriers.
+                           
+                            ANAD (National Association of Anorexia Nervosa and Associated Disorders)
+
+                            Phone: 1-888-375-7767
+                            Website: anad.org
+                            Description: Offers free support groups, mentorship programs, and educational resources for individuals affected by eating disorders.
                             
-                            Boys Town National Hotline
+                            Binge Eating Disorder Association (BEDA)
 
-                            Phone: 1-800-448-3000
-                            Website: boystown.org/hotline
-                            Provides crisis intervention and counseling services for children and families.
-                            Additional Resources
+                            Website: bedaonline.com
+                            Description: Provides support and resources specifically for individuals struggling with binge eating disorder.
+                            
+                            Mental Health America (MHA) - Body Image Resources
 
+                            Website: mhanational.org
+                            Description: Offers information and resources on body image and its impact on mental health.
+                            
+                            The Body Image Movement
+
+                            Website: bodyimagemovement.com
+                            Description: Advocates for positive body image and self-acceptance through education and community engagement.
                 """
+
                 parts.append('Summary: ')
                 parts.extend(self.report_summary)
                 parts.append(mental_health_resources)
