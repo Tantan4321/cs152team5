@@ -60,6 +60,8 @@ class State(Enum):
     AWAITING_MESSAGE = auto() # start: user sends link, end: ask for abuse type
     AWAITING_ABUSE_TYPE = auto() # start: user sends abuse type, end: ask for type of bullying or thank/ask block
     AWAITING_BULLYING_TYPE = auto() # start: user sends bullying type, end: ask for bullying victim
+    AWAITING_VICTIM_BLOCK = auto()
+    AWAITING_VICTIM_TYPE = auto()
     AWAITING_VICTIM = auto() # start: user sends victim, end: ask about resources or thank/ask block
     AWAITING_RESOURCES = auto() # start: user sends resource preferences, end: send resources(?), thank/ask block
     AWAITING_BLOCK_TYPE = auto() # start: user sends block preferences, end: block simulated
@@ -224,12 +226,32 @@ class Report:
         if self.state == State.AWAITING_BULLYING_TYPE:
             self.report_summary.append('Bullying type:' + self.bullying_type[message.content])
             self.bullying_type = int(message.content)
+            self.state = State.AWAITING_VICTIM_BLOCK
+            return ["Would you like to block this user to prevent seeing their content in the future?", \
+                "1. Yes, just this account", \
+                "2. Yes, this and any future accounts they create using the same email/phone number", \
+                "3. No, I wish to continue seeing this creator's content"]
+
+
+        if self.state == State.AWAITING_VICTIM_BLOCK:
+            self.report_summary.append('Blocking type:' + self.blocking_type[message.content])
+            reply = []
+            self.state = State.AWAITING_VICTIM_TYPE
+            if message.content == '1':
+                reply += ["This user has been blocked."]
+            elif message.content == '2':
+                reply += ["This user and the accounts they may create have been blocked."]
+            else:
+                reply += ["The user will not be blocked."]
+            reply += ["Thank you for your report!"]
+            return reply
+
+        if self.state == State.AWAITING_VICTIM_TYPE:
             self.state = State.AWAITING_VICTIM
             return ["This content is bullying: ", \
-            "1. Me", \
-            "2. Someone I Know", \
-            "3. Other"]
-
+             "1. Me", \
+             "2. Someone I Know", \
+             "3. Other"]
 
         if self.state == State.AWAITING_VICTIM:
             self.report_summary.append('Identity of victim:' + self.victim[message.content])
@@ -239,15 +261,11 @@ class Report:
                 return ["Would you like to be redirected to a list of mental health help resources? You are not alone. (Y/N)"]
             else:
                 self.state = State.AWAITING_BLOCK_TYPE
-                return ["Thank you for keeping our community safe from bullying! Your report will be reviewed and appropriate action will be taken.", \
-                "Would you like to block this user to prevent seeing their content in the future?", \
-                "1. Yes, just this account", \
-                "2. Yes, this and any future accounts they create using the same email/phone number", \
-                "3. No, I wish to continue seeing this creator's content"]
+                return ["Thank you for keeping our community safe from bullying! Your report will be reviewed and appropriate action will be taken."]
 
         if self.state == State.AWAITING_RESOURCES:
             reply = []
-            self.state = State.AWAITING_BLOCK_TYPE
+            self.state = State.AWAITING_REVIEW
             if message.content == "Y":
                 parts = []
 
