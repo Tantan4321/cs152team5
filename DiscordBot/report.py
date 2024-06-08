@@ -496,12 +496,19 @@ class Report:
                     parts = [self.policy_text]
                     parts.append('Reported message:' + self.report_message.content)
 
+                    image_urls = [attachment.url for attachment in message.attachments if attachment.content_type.startswith('image')]
                     referenced_image_urls = [attachment.url for attachment in self.report_message.attachments if attachment.content_type.startswith('image')]
-                    
+
+                    if image_urls:
+                        for image_url in image_urls:
+                            image_path = await self.save_image(image_url, image_path='image.jpg')
+                            parts.append('Reported image:')
+                            parts.append(Part.from_image(Image.load_from_file(image_path)))
+
                     if referenced_image_urls:
                         for image_url in referenced_image_urls:
                             image_path = await self.save_image(image_url, image_path='reference_image.jpg')
-                            parts.append('Reported image:')
+                            parts.append('Post image:')
                             parts.append(Part.from_image(Image.load_from_file(image_path)))
 
                     parts.append('Explain why the text or image is a violation of a social media platform?')
